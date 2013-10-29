@@ -1,26 +1,27 @@
 {
-  "name": "sails-adapter-boilerplate",
+  "name": "sails-magento",
   "version": "0.0.1",
-  "description": "Boilerplate adapter for Sails.js",
-  "main": "BoilerplateAdapter.js",
+  "description": "Magento adapter for Sails.js",
+  "main": "MagentoAdapter.js",
   "scripts": {
     "test": "echo \"Adapter should be tested using Sails.js core.\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/balderdashy/sails-adapter-boilerplate.git"
+    "url": "git@github.com:JumpLink/sails-magento.git"
   },
   "keywords": [
     "orm",
     "waterline",
     "sails",
     "sailsjs",
-    "sails.js"
+    "sails.js",
+    "magento"
   ],
-  "author": "Your name here",
+  "author": "Pascal Garber",
   "license": "MIT",
   "readmeFilename": "README.md",
   "dependencies": {
-    "async": "0.1.22"
+    "async": "*"
   }
 }
