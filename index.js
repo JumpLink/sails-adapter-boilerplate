@@ -4,220 +4,281 @@
 ---------------------------------------------------------------*/
 
 var async = require('async');
+var dnode = require('dnode');
+var criteria = require('./criteria');
 
-var adapter = module.exports = {
+module.exports = (function() {
 
-  // Set to true if this adapter supports (or requires) things like data types, validations, keys, etc.
-  // If true, the schema for models using this adapter will be automatically synced when the server starts.
-  // Not terribly relevant if not using a non-SQL / non-schema-ed data store
-  syncable: false,
+  // Holds an open connection
+  //var connection = {};
+  var schemaStash = {};
 
-  // Including a commitLog config enables transactions in this adapter
-  // Please note that these are not ACID-compliant transactions: 
-  // They guarantee *ISOLATION*, and use a configurable persistent store, so they are *DURABLE* in the face of server crashes.
-  // However there is no scheduled task that rebuild state from a mid-step commit log at server start, so they're not CONSISTENT yet.
-  // and there is still lots of work to do as far as making them ATOMIC (they're not undoable right now)
-  //
-  // However, for the immediate future, they do a great job of preventing race conditions, and are
-  // better than a naive solution.  They add the most value in findOrCreate() and createEach().
-  // 
-  // commitLog: {
-  //  identity: '__default_mongo_transaction',
-  //  adapter: 'sails-mongo'
-  // },
+  var adapter = {
 
-  // Default configuration for collections
-  // (same effect as if these properties were included at the top level of the model definitions)
-  defaults: {
+    // Set to true if this adapter supports (or requires) things like data types, validations, keys, etc.
+    // If true, the schema for models using this adapter will be automatically synced when the server starts.
+    // Not terribly relevant if not using a non-SQL / non-schema-ed data store
+    syncable: false,
 
-    // For example:
-    // port: 3306,
-    // host: 'localhost'
-
-    // If setting syncable, you should consider the migrate option, 
-    // which allows you to set how the sync will be performed.
-    // It can be overridden globally in an app (config/adapters.js) and on a per-model basis.
+    // Including a commitLog config enables transactions in this adapter
+    // Please note that these are not ACID-compliant transactions: 
+    // They guarantee *ISOLATION*, and use a configurable persistent store, so they are *DURABLE* in the face of server crashes.
+    // However there is no scheduled task that rebuild state from a mid-step commit log at server start, so they're not CONSISTENT yet.
+    // and there is still lots of work to do as far as making them ATOMIC (they're not undoable right now)
     //
-    // drop   => Drop schema and data, then recreate it
-    // alter  => Drop/add columns as necessary, but try 
-    // safe   => Don't change anything (good for production DBs)
-    migrate: 'alter'
-  },
+    // However, for the immediate future, they do a great job of preventing race conditions, and are
+    // better than a naive solution.  They add the most value in findOrCreate() and createEach().
+    // 
+    // commitLog: {
+    //  identity: '__default_mongo_transaction',
+    //  adapter: 'sails-mongo'
+    // },
 
-  // This method runs when a model is initially registered at server start time
-  registerCollection: function(collection, cb) {
+    // Default configuration for collections
+    // (same effect as if these properties were included at the top level of the model definitions)
+    defaults: {
 
-    cb();
-  },
+      // For example:
+      // port: 3306,
+      // host: 'localhost'
 
+      // If setting syncable, you should consider the migrate option, 
+      // which allows you to set how the sync will be performed.
+      // It can be overridden globally in an app (config/adapters.js) and on a per-model basis.
+      //
+      // drop   => Drop schema and data, then recreate it
+      // alter  => Drop/add columns as necessary, but try 
+      // safe   => Don't change anything (good for production DBs)
+      migrate: 'alter'
+    },
 
-  // The following methods are optional
-  ////////////////////////////////////////////////////////////
+    // This method runs when a model is initially registered at server start time
+    registerCollection: function(collection, cb) {
+      console.log("sails-magento: registerCollection: function(collection, cb)");
+      console.log("\ncb: ");
+      console.log(""+cb);
 
-  // Optional hook fired when a model is unregistered, typically at server halt
-  // useful for tearing down remaining open connections, etc.
-  teardown: function(cb) {
-    cb();
-  },
+      console.log("\ncollection: ");
+      console.log(collection);
 
+      schemaStash[collection.identity] = collection.definition;
 
-  // REQUIRED method if integrating with a schemaful database
-  define: function(collectionName, definition, cb) {
-
-    // Define a new "table" or "collection" schema in the data store
-    cb();
-  },
-  // REQUIRED method if integrating with a schemaful database
-  describe: function(collectionName, cb) {
-
-    // Respond with the schema (attributes) for a collection or table in the data store
-    var attributes = {};
-    cb(null, attributes);
-  },
-  // REQUIRED method if integrating with a schemaful database
-  drop: function(collectionName, cb) {
-    // Drop a "table" or "collection" schema from the data store
-    cb();
-  },
-
-  // Optional override of built-in alter logic
-  // Can be simulated with describe(), define(), and drop(),
-  // but will probably be made much more efficient by an override here
-  // alter: function (collectionName, attributes, cb) { 
-  // Modify the schema of a table or collection in the data store
-  // cb(); 
-  // },
+      cb();
+    },
 
 
-  // REQUIRED method if users expect to call Model.create() or any methods
-  create: function(collectionName, values, cb) {
-    // Create a single new model specified by values
+    // The following methods are optional
+    ////////////////////////////////////////////////////////////
 
-    // Respond with error or newly created model instance
-    cb(null, values);
-  },
-
-  // REQUIRED method if users expect to call Model.find(), Model.findAll() or related methods
-  // You're actually supporting find(), findAll(), and other methods here
-  // but the core will take care of supporting all the different usages.
-  // (e.g. if this is a find(), not a findAll(), it will only send back a single model)
-  find: function(collectionName, options, cb) {
-
-    // ** Filter by criteria in options to generate result set
-
-    // Respond with an error or a *list* of models in result set
-    cb(null, []);
-  },
-
-  // REQUIRED method if users expect to call Model.update()
-  update: function(collectionName, options, values, cb) {
-
-    // ** Filter by criteria in options to generate result set
-
-    // Then update all model(s) in the result set
-
-    // Respond with error or a *list* of models that were updated
-    cb();
-  },
-
-  // REQUIRED method if users expect to call Model.destroy()
-  destroy: function(collectionName, options, cb) {
-
-    // ** Filter by criteria in options to generate result set
-
-    // Destroy all model(s) in the result set
-
-    // Return an error or nothing at all
-    cb();
-  },
+    // Optional hook fired when a model is unregistered, typically at server halt
+    // useful for tearing down remaining open connections, etc.
+    teardown: function(cb) {
+      console.log("sails-magento: teardown: function("+cb+")");
+      cb();
+    },
 
 
+    // REQUIRED method if integrating with a schemaful database
+    define: function(collectionName, definition, cb) {
+      console.log("sails-magento: define: function("+collectionName+", "+definition+", "+cb+")");
+      // Define a new "table" or "collection" schema in the data store
+      cb();
+    },
+    // REQUIRED method if integrating with a schemaful database
+    describe: function(collectionName, cb) {
+      console.log("sails-magento: describe: function("+collectionName+", "+cb+")");
+      // Respond with the schema (attributes) for a collection or table in the data store
+      var attributes = {};
+      cb(null, attributes);
+    },
+    // REQUIRED method if integrating with a schemaful database
+    drop: function(collectionName, cb) {
+      console.log("sails-magento: drop: function("+collectionName+", "+cb+")");
+      // Drop a "table" or "collection" schema from the data store
+      cb();
+    },
 
-  // REQUIRED method if users expect to call Model.stream()
-  stream: function(collectionName, options, stream) {
-    // options is a standard criteria/options object (like in find)
+    // Optional override of built-in alter logic
+    // Can be simulated with describe(), define(), and drop(),
+    // but will probably be made much more efficient by an override here
+    // alter: function (collectionName, attributes, cb) { 
+    // Modify the schema of a table or collection in the data store
+    // cb(); 
+    // },
 
-    // stream.write() and stream.end() should be called.
-    // for an example, check out:
-    // https://github.com/balderdashy/sails-dirty/blob/master/DirtyAdapter.js#L247
+
+    // REQUIRED method if users expect to call Model.create() or any methods
+    create: function(collectionName, values, cb) {
+      console.log("sails-magento: create: function("+collectionName+", "+values+", "+cb+")");
+      // Create a single new model specified by values
+
+      // Respond with error or newly created model instance
+      cb(null, values);
+    },
+
+    // REQUIRED method if users expect to call Model.find(), Model.findAll() or related methods
+    // You're actually supporting find(), findAll(), and other methods here
+    // but the core will take care of supporting all the different usages.
+    // (e.g. if this is a find(), not a findAll(), it will only send back a single model)
+    find: function(collectionName, options, cb) {
+      console.log("sails-magento: find: function(collectionName, options, cb)");
+      console.log("\ncollectionName:");
+      console.log(collectionName);
+      console.log("\noptions:");
+      console.log(options);
+      // ** Filter by criteria in options to generate result set
+
+      // Rewrite where criteria
+      if(options.where) {
+        var where = {where: options.where };
+        options.where = criteria.rewriteCriteria(where, schemaStash[collectionName]).where;
+        console.log("\nrewriteCriteria result: ");
+        console.log(options);
+      }
+      dnode.connect(6060, function (remote, conn) {
+          var store = null; // TODO
+          remote.customer_items(options.where, store, function (result) {
+              //console.log(result);
+              console.log("result length: "+result.length);
+              conn.end();
+              cb(null, result);
+          });
+      });
+      // Respond with an error or a *list* of models in result set
+      
+    },
+
+    // REQUIRED method if users expect to call Model.update()
+    update: function(collectionName, options, values, cb) {
+      console.log("sails-magento: update: function("+collectionName+", "+options+", "+values+", "+cb+")");
+      // ** Filter by criteria in options to generate result set
+
+      // Then update all model(s) in the result set
+
+      // Respond with error or a *list* of models that were updated
+      cb();
+    },
+
+    // REQUIRED method if users expect to call Model.destroy()
+    destroy: function(collectionName, options, cb) {
+      console.log("sails-magento: destroy: function("+collectionName+", "+options+", "+cb+")");
+      // ** Filter by criteria in options to generate result set
+
+      // Destroy all model(s) in the result set
+
+      // Return an error or nothing at all
+      cb();
+    },
+
+
+
+    // REQUIRED method if users expect to call Model.stream()
+    stream: function(collectionName, options, stream) {
+      console.log("sails-magento: stream: function("+collectionName+", "+options+", "+stream+")");
+      // options is a standard criteria/options object (like in find)
+
+      // stream.write() and stream.end() should be called.
+      // for an example, check out:
+      // https://github.com/balderdashy/sails-dirty/blob/master/DirtyAdapter.js#L247
+
+    }
+
+
+
+    /*
+    **********************************************
+    * Optional overrides
+    **********************************************
+
+    // Optional override of built-in batch create logic for increased efficiency
+    // otherwise, uses create()
+    createEach: function (collectionName, cb) { cb(); },
+
+    // Optional override of built-in findOrCreate logic for increased efficiency
+    // otherwise, uses find() and create()
+    findOrCreate: function (collectionName, cb) { cb(); },
+
+    // Optional override of built-in batch findOrCreate logic for increased efficiency
+    // otherwise, uses findOrCreate()
+    findOrCreateEach: function (collectionName, cb) { cb(); }
+    */
+
+
+    /*
+    **********************************************
+    * Custom methods
+    **********************************************
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // > NOTE:  There are a few gotchas here you should be aware of.
+    //
+    //    + The collectionName argument is always prepended as the first argument.
+    //      This is so you can know which model is requesting the adapter.
+    //
+    //    + All adapter functions are asynchronous, even the completely custom ones,
+    //      and they must always include a callback as the final argument.
+    //      The first argument of callbacks is always an error object.
+    //      For some core methods, Sails.js will add support for .done()/promise usage.
+    //
+    //    + 
+    //
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    // Any other methods you include will be available on your models
+    foo: function (collectionName, cb) {
+      cb(null,"ok");
+    },
+    bar: function (collectionName, baz, watson, cb) {
+      cb("Failure!");
+    }
+
+
+    // Example success usage:
+
+    Model.foo(function (err, result) {
+      if (err) console.error(err);
+      else console.log(result);
+
+      // outputs: ok
+    })
+
+    // Example error usage:
+
+    Model.bar(235, {test: 'yes'}, function (err, result){
+      if (err) console.error(err);
+      else console.log(result);
+
+      // outputs: Failure!
+    })
+
+    */
 
   }
 
+  //////////////      Start      //////////////////////////////////////////
+  ////////////// Private Methods //////////////////////////////////////////
+  //////////////                 //////////////////////////////////////////
 
 
-  /*
-  **********************************************
-  * Optional overrides
-  **********************************************
+  function spawnConnection (logic, config, cb) {
+    if (connection !== {}) {
+      cb();
+    } else {
+  
+    }
 
-  // Optional override of built-in batch create logic for increased efficiency
-  // otherwise, uses create()
-  createEach: function (collectionName, cb) { cb(); },
-
-  // Optional override of built-in findOrCreate logic for increased efficiency
-  // otherwise, uses find() and create()
-  findOrCreate: function (collectionName, cb) { cb(); },
-
-  // Optional override of built-in batch findOrCreate logic for increased efficiency
-  // otherwise, uses findOrCreate()
-  findOrCreateEach: function (collectionName, cb) { cb(); }
-  */
-
-
-  /*
-  **********************************************
-  * Custom methods
-  **********************************************
-
-  ////////////////////////////////////////////////////////////////////////////////////////////////////
-  //
-  // > NOTE:  There are a few gotchas here you should be aware of.
-  //
-  //    + The collectionName argument is always prepended as the first argument.
-  //      This is so you can know which model is requesting the adapter.
-  //
-  //    + All adapter functions are asynchronous, even the completely custom ones,
-  //      and they must always include a callback as the final argument.
-  //      The first argument of callbacks is always an error object.
-  //      For some core methods, Sails.js will add support for .done()/promise usage.
-  //
-  //    + 
-  //
-  ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-  // Any other methods you include will be available on your models
-  foo: function (collectionName, cb) {
-    cb(null,"ok");
-  },
-  bar: function (collectionName, baz, watson, cb) {
-    cb("Failure!");
+    function afterwards() {
+      logic(connection, function(err, result) {
+        if(cb) return cb(err, result);
+      });
+    }
   }
 
+  //////////////       End       //////////////////////////////////////////
+  ////////////// Private Methods //////////////////////////////////////////
+  //////////////                 //////////////////////////////////////////
 
-  // Example success usage:
-
-  Model.foo(function (err, result) {
-    if (err) console.error(err);
-    else console.log(result);
-
-    // outputs: ok
-  })
-
-  // Example error usage:
-
-  Model.bar(235, {test: 'yes'}, function (err, result){
-    if (err) console.error(err);
-    else console.log(result);
-
-    // outputs: Failure!
-  })
-
-  */
-
-
-};
-
-//////////////                 //////////////////////////////////////////
-////////////// Private Methods //////////////////////////////////////////
-//////////////                 //////////////////////////////////////////
+  return adapter;
+})();
