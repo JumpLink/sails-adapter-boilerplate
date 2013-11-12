@@ -73,27 +73,27 @@ module.exports = (function() {
     // Optional hook fired when a model is unregistered, typically at server halt
     // useful for tearing down remaining open connections, etc.
     teardown: function(cb) {
-      console.log("sails-magento: teardown: function("+cb+")");
+      sails.log.debug("sails-magento: teardown: function("+cb+")");
       cb();
     },
 
 
     // REQUIRED method if integrating with a schemaful database
     define: function(collectionName, definition, cb) {
-      console.log("sails-magento: define: function("+collectionName+", "+definition+", "+cb+")");
+      sails.log.debug("sails-magento: define: function("+collectionName+", "+definition+", "+cb+")");
       // Define a new "table" or "collection" schema in the data store
       cb();
     },
     // REQUIRED method if integrating with a schemaful database
     describe: function(collectionName, cb) {
-      console.log("sails-magento: describe: function("+collectionName+", "+cb+")");
+      sails.log.debug("sails-magento: describe: function("+collectionName+", "+cb+")");
       // Respond with the schema (attributes) for a collection or table in the data store
       var attributes = {};
       cb(null, attributes);
     },
     // REQUIRED method if integrating with a schemaful database
     drop: function(collectionName, cb) {
-      console.log("sails-magento: drop: function("+collectionName+", "+cb+")");
+      sails.log.debug("sails-magento: drop: function("+collectionName+", "+cb+")");
       // Drop a "table" or "collection" schema from the data store
       cb();
     },
@@ -109,48 +109,229 @@ module.exports = (function() {
 
     // REQUIRED method if users expect to call Model.create() or any methods
     create: function(collectionName, values, cb) {
-      console.log("sails-magento: create: function("+collectionName+", "+values+", "+cb+")");
+      sails.log.debug("sails-magento: create: function("+collectionName+", "+values+", "+cb+")");
       // Create a single new model specified by values
 
       // Respond with error or newly created model instance
       cb(null, values);
     },
 
-    // REQUIRED method if users expect to call Model.find(), Model.findAll() or related methods
+    findOne: function(collectionName, options, cb) {
+      sails.log.debug("sails-magento: findOne: function(collectionName, options, cb)");
+      sails.log.debug("\ncollectionName:");
+      sails.log.debug(collectionName);
+      sails.log.debug("\noptions:");
+      sails.log.debug(options);
+
+      switch (collectionName) {
+        case 'customer':
+          dnode.connect(6060, function (remote, conn) {
+            var attributes = null; // TODO
+            remote.customer_info(options.where.id, attributes, function (result) {
+                //sails.log.debug(result);
+                sails.log.debug("result length: "+result.length);
+                conn.end();
+                cb(null, result);
+            });
+          });
+        break;
+        case 'category':
+          var d = dnode.connect(6060);                
+          d.on('remote', function (remote, conn) {
+            sails.log.debug('remote');
+            var store = null; // TODO
+            var attributes = null; // TODO
+            remote.category_info(options.where.id, store, attributes, function (result) {
+                sails.log.debug("result length: "+result.length);
+                conn.end();
+                if (!result.isArray)
+                  result = [result];
+                cb(null, result);
+            });
+          });
+          d.on('error', function (error) {
+            sails.log.error(error);
+            cb(null, []);
+          });
+        break;
+        case 'product':
+          dnode.connect(6060, function (remote, conn) {
+            var store = null; // TODO
+            var attributes = null; //TODO 
+            var identifierType = "id";
+            var product;
+
+            if (typeof(options.where.id) != "undefined" && options.where.id != null) {
+              product = options.where.id;
+            }
+            else if (typeof(options.where.sku) != "undefined" && options.where.sku != null) {
+              product = options.where.sku;
+              identifierType = "sku";
+            }
+
+            sails.log.debug("product: ".product);
+            remote.product_info(product, store, attributes, identifierType, function (result) {
+              //sails.log.debug(result);
+              sails.log.debug("result length: "+result.length);
+              conn.end();
+              cb(null, [result]);
+            });
+          });
+        break;
+        default:
+          sails.log.debug("unknown collectionName");
+          cb(null, {});
+        break;
+      }
+    },
+
+    findAll: function(collectionName, options, cb) {
+      sails.log.debug("findAll");
+      switch (collectionName) {
+        case 'customer':
+          var d = dnode.connect(6060);                
+          d.on('remote', function (remote, conn) {
+            sails.log.debug('remote');
+            var store = null; // TODO
+            remote.customer_items(null, store, function (result) {
+                sails.log.debug("result length: "+result.length);
+                conn.end();
+                cb(null, result);
+            });
+          });
+          d.on('error', function (error) {
+            sails.log.error(error);
+            cb(null, []);
+          });
+        break;
+        case 'category':
+          var d = dnode.connect(6060);                
+          d.on('remote', function (remote, conn) {
+            sails.log.debug('remote');
+            var store = null; // TODO
+            var parentId = null;
+            remote.category_tree(parentId, store, function (result) {
+                sails.log.debug("result length: "+result.length);
+                conn.end();
+                if (!result.isArray)
+                  result = [result];
+                cb(null, result);
+            });
+          });
+          d.on('error', function (error) {
+            sails.log.error(error);
+            cb(null, []);
+          });
+        break;
+        case 'product':
+          var d = dnode.connect(6060);                
+          d.on('remote', function (remote, conn) {
+            sails.log.debug('remote');
+            var store = null; // TODO
+            remote.product_items_all(store, function (result) {
+                sails.log.debug("result length: "+result.length);
+                conn.end();
+                cb(null, result);
+            });
+/*            remote.product_export(function (type, data) {
+                sails.log.debug("result length: "+result.length);
+                conn.end();
+                cb(null, result);
+                sails.log.debug(type);
+                sails.log.debug(data);
+            });*/
+          });
+          d.on('error', function (error) {
+            sails.log.error(error);
+            cb(null, []);
+          });
+        break;
+        default:
+          sails.log.error("unknown collectionName");
+          cb(null, []);
+        break;
+      }
+    },
+
+    // REQUIRED method if users expect to call Model.find(), Model.findOne() or related methods
     // You're actually supporting find(), findAll(), and other methods here
     // but the core will take care of supporting all the different usages.
     // (e.g. if this is a find(), not a findAll(), it will only send back a single model)
     find: function(collectionName, options, cb) {
-      console.log("sails-magento: find: function(collectionName, options, cb)");
-      console.log("\ncollectionName:");
-      console.log(collectionName);
-      console.log("\noptions:");
-      console.log(options);
-      // ** Filter by criteria in options to generate result set
-
-      // Rewrite where criteria
-      if(options.where) {
-        var where = {where: options.where };
-        options.where = criteria.rewriteCriteria(where, schemaStash[collectionName]).where;
-        console.log("\nrewriteCriteria result: ");
-        console.log(options);
+      if (options.limit == 1 && _.size(options.where) == 1 && options.where.hasOwnProperty("id") )
+        this.findOne(collectionName, options, cb);
+      else if (options.where == null) {
+        this.findAll(collectionName, options, cb);
       }
-      dnode.connect(6060, function (remote, conn) {
-          var store = null; // TODO
-          remote.customer_items(options.where, store, function (result) {
-              //console.log(result);
-              console.log("result length: "+result.length);
-              conn.end();
-              cb(null, result);
-          });
-      });
+      else {
+        sails.log.debug("sails-magento: find: function(collectionName, options, cb)");
+        sails.log.debug("\ncollectionName:");
+        sails.log.debug(collectionName);
+        sails.log.debug("\noptions:");
+        sails.log.debug(options);
+        // ** Filter by criteria in options to generate result set
+
+        // Rewrite where criteria
+        if(options.where && options.limit != 1) {
+          var where = {where: options.where };
+          options.where = criteria.rewriteCriteria(where, schemaStash[collectionName], collectionName).where;
+          sails.log.debug("\nrewriteCriteria result: ");
+          sails.log.debug(options);
+        }
+        switch (collectionName) {
+
+          case 'customer':
+          break;
+          case 'product':
+/*            var d = dnode.connect(6060, function (remote, conn) {
+                var store = null; // TODO
+                var attributes = null; //TODO 
+                var identifierType = "id";
+                remote.product_items_info(options.where, store, function (result) {
+                    //sails.log.debug(result);
+                    sails.log.debug("result length: "+result.length);
+                    conn.end();
+                    cb(null, result);
+                });                
+            });*/
+            var d = dnode.connect(6060);                
+            d.on('remote', function (remote, conn) {
+              sails.log.debug('remote');
+              var store = null; // TODO
+              var attributes = null; //TODO 
+              var identifierType = "id";
+              remote.product_items_info_2(options.where, store, function (result) {
+                  //sails.log.debug(result);
+                  sails.log.debug("result length: "+result.length);
+                  conn.end();
+                  cb(null, result);
+              });
+/*              remote.product_items_info(options.where, store, function (result) {
+                  //sails.log.debug(result);
+                  sails.log.debug("result length: "+result.length);
+                  conn.end();
+                  cb(null, result);
+              });*/
+            });
+            d.on('error', function (error) {
+              sails.log.error(error);
+              cb(null, []);
+            });
+          break;
+          default:
+            sails.log.error("unknown collectionName");
+            cb(null, []);
+          break;
+        }
+      }
+
       // Respond with an error or a *list* of models in result set
       
     },
 
     // REQUIRED method if users expect to call Model.update()
     update: function(collectionName, options, values, cb) {
-      console.log("sails-magento: update: function("+collectionName+", "+options+", "+values+", "+cb+")");
+      sails.log.debug("sails-magento: update: function("+collectionName+", "+options+", "+values+", "+cb+")");
       // ** Filter by criteria in options to generate result set
 
       // Then update all model(s) in the result set
@@ -161,7 +342,7 @@ module.exports = (function() {
 
     // REQUIRED method if users expect to call Model.destroy()
     destroy: function(collectionName, options, cb) {
-      console.log("sails-magento: destroy: function("+collectionName+", "+options+", "+cb+")");
+      sails.log.debug("sails-magento: destroy: function("+collectionName+", "+options+", "+cb+")");
       // ** Filter by criteria in options to generate result set
 
       // Destroy all model(s) in the result set
@@ -174,7 +355,7 @@ module.exports = (function() {
 
     // REQUIRED method if users expect to call Model.stream()
     stream: function(collectionName, options, stream) {
-      console.log("sails-magento: stream: function("+collectionName+", "+options+", "+stream+")");
+      sails.log.debug("sails-magento: stream: function("+collectionName+", "+options+", "+stream+")");
       // options is a standard criteria/options object (like in find)
 
       // stream.write() and stream.end() should be called.
@@ -239,7 +420,7 @@ module.exports = (function() {
 
     Model.foo(function (err, result) {
       if (err) console.error(err);
-      else console.log(result);
+      else sails.log.debug(result);
 
       // outputs: ok
     })
@@ -248,7 +429,7 @@ module.exports = (function() {
 
     Model.bar(235, {test: 'yes'}, function (err, result){
       if (err) console.error(err);
-      else console.log(result);
+      else sails.log.debug(result);
 
       // outputs: Failure!
     })

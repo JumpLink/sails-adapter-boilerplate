@@ -3,13 +3,24 @@ var _ = require('underscore')
   ;
 
 module.exports = {
-  rewriteCriteria: function(options, schema) {
+  rewriteCriteria: function(options, schema, collectionName) {
     if (options.hasOwnProperty('where')) {
 
-      if (options.where.id && !options.where.customer_id) {
-        options.where['customer_id'] = _.clone(options.where.id);
-        delete options.where.id
+      switch (collectionName) {
+        case "customer":
+          if (options.where.id && !options.where.customer_id) {
+            options.where['customer_id'] = _.clone(options.where.id);
+            delete options.where.id
+          }
+        break;
+        case "product":
+          if (options.where.id && !options.where.product_id) {
+            options.where['product_id'] = _.clone(options.where.id);
+            delete options.where.id
+          }
+        break;
       }
+
       options = this.normalizeCriteria(options);
     }
      return options;
@@ -33,38 +44,42 @@ module.exports = {
 
             delete obj[key];
             filter.push ({"key": key, "value": val});
-
+            // OPERATORS: http://www.fontis.com.au/blog/magento/web-services-api-filter-operators 
             switch (key) {
               case 'sort':
                 //"dsc"  "asc"
               break;
               case 'contains':
+                obj[key] = "in";
               break;
               case 'like':
+              // like
               break;
               case 'startsWith':
+                obj[key] = "from";
               break;
               case 'endsWith':
+                obj[key] = "to";
               break;
               case 'lessThan':
               case '<':
-                // "lt"
+                obj[key] = "lt";
               break;
               case 'lessThanOrEqual':
               case '<=':
-              // "lte"
+                obj[key] = "lteq";
               break;
               case 'greaterThan':
               case '>':
-                // "gt"
+                obj[key] = "gt";
               break;
               case 'greaterThanOrEqual':
               case '>=':
-                // "gte"
+                obj[key] = "gteq";
               break;
               case 'not':
               case '!':
-                // "neq"
+                obj[key] = "neq";
               break;
               default:
 
