@@ -151,31 +151,68 @@ module.exports = (function() {
           });
           d.on('error', function (error) {
             sails.log.error(error);
-            cb(null, []);
+            cb(error, []);
           });
         break;
         case 'product':
-          dnode.connect(6060, function (remote, conn) {
+          var store = null; // TODO
+          var attributes = null; //TODO 
+          var identifierType = "id";
+          var product;
+          if (typeof(options.where.id) != "undefined" && options.where.id != null) {
+            product = options.where.id;
+          }
+          else if (typeof(options.where.sku) != "undefined" && options.where.sku != null) {
+            product = options.where.sku;
+            identifierType = "sku";
+          }
+          var d = dnode.connect(6060);                
+          d.on('remote', function (remote, conn) {
+            sails.log.debug('remote');
             var store = null; // TODO
-            var attributes = null; //TODO 
-            var identifierType = "id";
-            var product;
-
-            if (typeof(options.where.id) != "undefined" && options.where.id != null) {
-              product = options.where.id;
-            }
-            else if (typeof(options.where.sku) != "undefined" && options.where.sku != null) {
-              product = options.where.sku;
-              identifierType = "sku";
-            }
-
-            sails.log.debug("product: ".product);
-            remote.product_info(product, store, attributes, identifierType, function (result) {
-              //sails.log.debug(result);
+            var attributes = null; // TODO
+            remote.product_export(product, store, attributes, identifierType, function (result) {
               sails.log.debug("result length: "+result.length);
               conn.end();
               cb(null, [result]);
+              if (!result.isArray)
+                result = [result];
+              cb(null, result);
             });
+          });
+          d.on('error', function (error) {
+            sails.log.error(error);
+            cb(error, []);
+          });
+        break;
+        case 'attributeset':
+          var d = dnode.connect(6060);                
+          d.on('remote', function (remote, conn) {
+            sails.log.debug('remote attributeset');
+            remote.attributeset_export(options.where.id, function (result) {
+                sails.log.debug("result length: "+result.length);
+                conn.end();
+                cb(null, result);
+            });
+          });
+          d.on('error', function (error) {
+            sails.log.error(error);
+            cb(error, []);
+          });
+        break;
+        case 'productattribute':
+          var d = dnode.connect(6060);                
+          d.on('remote', function (remote, conn) {
+            sails.log.debug('remote attributeset');
+            remote.productattribute_items(options.where.id, function (result) {
+                sails.log.debug("result length: "+result.length);
+                conn.end();
+                cb(null, result);
+            });
+          });
+          d.on('error', function (error) {
+            sails.log.error(error);
+            cb(error, []);
           });
         break;
         default:
@@ -201,7 +238,7 @@ module.exports = (function() {
           });
           d.on('error', function (error) {
             sails.log.error(error);
-            cb(null, []);
+            cb(error, []);
           });
         break;
         case 'category':
@@ -220,35 +257,42 @@ module.exports = (function() {
           });
           d.on('error', function (error) {
             sails.log.error(error);
-            cb(null, []);
+            cb(error, []);
           });
         break;
         case 'product':
           var d = dnode.connect(6060);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote');
-            var store = null; // TODO
-            remote.product_items_all(store, function (result) {
+            remote.product_export(null, null, null, null, function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
                 cb(null, result);
             });
-/*            remote.product_export(function (type, data) {
-                sails.log.debug("result length: "+result.length);
-                conn.end();
-                cb(null, result);
-                sails.log.debug(type);
-                sails.log.debug(data);
-            });*/
           });
           d.on('error', function (error) {
             sails.log.error(error);
-            cb(null, []);
+            cb(error, []);
+          });
+        break;
+        case 'attributeset':
+          var d = dnode.connect(6060);                
+          d.on('remote', function (remote, conn) {
+            sails.log.debug('remote attributeset');
+            remote.attributeset_export(null, function (result) {
+                sails.log.debug("result length: "+result.length);
+                conn.end();
+                cb(null, result);
+            });
+          });
+          d.on('error', function (error) {
+            sails.log.error(error);
+            cb(error, []);
           });
         break;
         default:
           sails.log.error("unknown collectionName");
-          cb(null, []);
+          cb("unknown collectionName", []);
         break;
       }
     },
@@ -258,7 +302,7 @@ module.exports = (function() {
     // but the core will take care of supporting all the different usages.
     // (e.g. if this is a find(), not a findAll(), it will only send back a single model)
     find: function(collectionName, options, cb) {
-      if (options.limit == 1 && _.size(options.where) == 1 && options.where.hasOwnProperty("id") )
+      if (options.limit == 1 && (options.where.hasOwnProperty("id") || options.where.hasOwnProperty("sku") ))
         this.findOne(collectionName, options, cb);
       else if (options.where == null) {
         this.findAll(collectionName, options, cb);
@@ -283,17 +327,6 @@ module.exports = (function() {
           case 'customer':
           break;
           case 'product':
-/*            var d = dnode.connect(6060, function (remote, conn) {
-                var store = null; // TODO
-                var attributes = null; //TODO 
-                var identifierType = "id";
-                remote.product_items_info(options.where, store, function (result) {
-                    //sails.log.debug(result);
-                    sails.log.debug("result length: "+result.length);
-                    conn.end();
-                    cb(null, result);
-                });                
-            });*/
             var d = dnode.connect(6060);                
             d.on('remote', function (remote, conn) {
               sails.log.debug('remote');
@@ -301,17 +334,10 @@ module.exports = (function() {
               var attributes = null; //TODO 
               var identifierType = "id";
               remote.product_items_info_2(options.where, store, function (result) {
-                  //sails.log.debug(result);
                   sails.log.debug("result length: "+result.length);
                   conn.end();
                   cb(null, result);
               });
-/*              remote.product_items_info(options.where, store, function (result) {
-                  //sails.log.debug(result);
-                  sails.log.debug("result length: "+result.length);
-                  conn.end();
-                  cb(null, result);
-              });*/
             });
             d.on('error', function (error) {
               sails.log.error(error);
@@ -331,11 +357,50 @@ module.exports = (function() {
 
     // REQUIRED method if users expect to call Model.update()
     update: function(collectionName, options, values, cb) {
-      sails.log.debug("sails-magento: update: function("+collectionName+", "+options+", "+values+", "+cb+")");
+      sails.log.debug("sails-magento: update: function(collectionName, options, values, cb)");
+      sails.log.debug("\ncollectionName:");
+      sails.log.debug(collectionName);
+      sails.log.debug("\noptions:");
+      sails.log.debug(options);
+      sails.log.debug("\nvalues:");
+      sails.log.debug(values);
+      sails.log.debug("\ncb:");
+      sails.log.debug(cb);
       // ** Filter by criteria in options to generate result set
 
       // Then update all model(s) in the result set
+      sails.log.debug("update");
+      switch (collectionName) {
+        case 'customer':
 
+        break;
+        case 'category':
+
+        break;
+        case 'product':
+          var d = dnode.connect(6060);                
+          d.on('remote', function (remote, conn) {
+            sails.log.debug('remote');
+            var store = null; // TODO
+/*            remote.product_update(options.where.id, store, function (result) {
+                sails.log.debug("result length: "+result.length);
+                conn.end();
+                cb(null, result);
+            });*/
+          });
+          d.on('error', function (error) {
+            sails.log.error(error);
+            cb(error, []);
+          });
+        break;
+        case 'attributeset':
+
+        break;
+        default:
+          sails.log.error("unknown collectionName");
+          cb("unknown collectionName", []);
+        break;
+      }
       // Respond with error or a *list* of models that were updated
       cb();
     },
@@ -441,7 +506,6 @@ module.exports = (function() {
   //////////////      Start      //////////////////////////////////////////
   ////////////// Private Methods //////////////////////////////////////////
   //////////////                 //////////////////////////////////////////
-
 
   function spawnConnection (logic, config, cb) {
     if (connection !== {}) {
