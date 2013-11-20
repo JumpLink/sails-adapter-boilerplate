@@ -7,6 +7,15 @@ var async = require('async');
 var dnode = require('dnode');
 var criteria = require('./criteria');
 
+if(typeof(sails)==='undefined')
+  sails = {
+    log: {
+      error : console.log,
+      debug : console.log,
+      info : console.log
+    }
+  }
+
 module.exports = (function() {
 
   // Holds an open connection
@@ -174,7 +183,6 @@ module.exports = (function() {
             remote.product_export(product, store, attributes, identifierType, function (result) {
               sails.log.debug("result length: "+result.length);
               conn.end();
-              cb(null, [result]);
               if (!result.isArray)
                 result = [result];
               cb(null, result);
@@ -192,6 +200,8 @@ module.exports = (function() {
             remote.attributeset_export(options.where.id, function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
+                if (!result.isArray)
+                  result = [result];
                 cb(null, result);
             });
           });
@@ -207,6 +217,8 @@ module.exports = (function() {
             remote.productattribute_items(options.where.id, function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
+                if (!result.isArray)
+                  result = [result];  
                 cb(null, result);
             });
           });
@@ -233,6 +245,8 @@ module.exports = (function() {
             remote.customer_items(null, store, function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
+                if (!result.isArray)
+                  result = [result];
                 cb(null, result);
             });
           });
@@ -267,6 +281,8 @@ module.exports = (function() {
             remote.product_export(null, null, null, null, function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
+                if (!result.isArray)
+                  result = [result];
                 cb(null, result);
             });
           });
@@ -282,6 +298,8 @@ module.exports = (function() {
             remote.attributeset_export(null, function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
+                if (!result.isArray)
+                  result = [result];
                 cb(null, result);
             });
           });
@@ -336,6 +354,8 @@ module.exports = (function() {
               remote.product_items_info_2(options.where, store, function (result) {
                   sails.log.debug("result length: "+result.length);
                   conn.end();
+                  if (!result.isArray)
+                    result = [result];
                   cb(null, result);
               });
             });
@@ -382,11 +402,15 @@ module.exports = (function() {
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote');
             var store = null; // TODO
-/*            remote.product_update(options.where.id, store, function (result) {
-                sails.log.debug("result length: "+result.length);
+            var identifierType = "id"
+            var id = options.where.id;
+            remote.product_update(id, values, store, identifierType, function (result) {
                 conn.end();
+                if(result === true)
+                  result = [{id: id}];
+                console.log(result);
                 cb(null, result);
-            });*/
+            });
           });
           d.on('error', function (error) {
             sails.log.error(error);
@@ -402,7 +426,7 @@ module.exports = (function() {
         break;
       }
       // Respond with error or a *list* of models that were updated
-      cb();
+     // cb();
     },
 
     // REQUIRED method if users expect to call Model.destroy()
