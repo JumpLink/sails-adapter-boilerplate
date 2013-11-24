@@ -136,12 +136,12 @@ module.exports = (function() {
         case 'customer':
           dnode.connect(6060, function (remote, conn) {
             var attributes = null; // TODO
-            remote.customer_info(options.where.id, attributes, function (result) {
+            remote.customer_info(function (result) {
                 //sails.log.debug(result);
                 sails.log.debug("result length: "+result.length);
                 conn.end();
                 cb(null, result);
-            });
+            }, options.where.id, attributes);
           });
         break;
         case 'category':
@@ -150,13 +150,13 @@ module.exports = (function() {
             sails.log.debug('remote');
             var store = null; // TODO
             var attributes = null; // TODO
-            remote.category_info(options.where.id, store, attributes, function (result) {
+            remote.category_info(function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
                 if (!result.isArray)
                   result = [result];
                 cb(null, result);
-            });
+            }, options.where.id, store, attributes);
           });
           d.on('error', function (error) {
             sails.log.error(error);
@@ -180,13 +180,13 @@ module.exports = (function() {
             sails.log.debug('remote');
             var store = null; // TODO
             var attributes = null; // TODO
-            remote.product_export(product, store, attributes, identifierType, function (result) {
+            remote.product_export(function (result) {
               sails.log.debug("result length: "+result.length);
               conn.end();
               if (!result.isArray)
                 result = [result];
               cb(null, result);
-            });
+            }, product, store, attributes, identifierType);
           });
           d.on('error', function (error) {
             sails.log.error(error);
@@ -197,13 +197,13 @@ module.exports = (function() {
           var d = dnode.connect(6060);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote attributeset');
-            remote.attributeset_export(options.where.id, function (result) {
+            remote.attributeset_export(function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
                 if (!result.isArray)
                   result = [result];
                 cb(null, result);
-            });
+            }, options.where.id);
           });
           d.on('error', function (error) {
             sails.log.error(error);
@@ -214,13 +214,13 @@ module.exports = (function() {
           var d = dnode.connect(6060);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote attributeset');
-            remote.productattribute_items(options.where.id, function (result) {
+            remote.productattribute_items(function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
                 if (!result.isArray)
                   result = [result];  
                 cb(null, result);
-            });
+            }, options.where.id);
           });
           d.on('error', function (error) {
             sails.log.error(error);
@@ -242,13 +242,13 @@ module.exports = (function() {
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote');
             var store = null; // TODO
-            remote.customer_items(null, store, function (result) {
+            remote.customer_items(function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
                 if (!result.isArray)
                   result = [result];
                 cb(null, result);
-            });
+            }, null, store);
           });
           d.on('error', function (error) {
             sails.log.error(error);
@@ -261,13 +261,13 @@ module.exports = (function() {
             sails.log.debug('remote');
             var store = null; // TODO
             var parentId = null;
-            remote.category_tree(parentId, store, function (result) {
+            remote.category_tree(function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
                 if (!result.isArray)
                   result = [result];
                 cb(null, result);
-            });
+            }, parentId, store);
           });
           d.on('error', function (error) {
             sails.log.error(error);
@@ -278,7 +278,7 @@ module.exports = (function() {
           var d = dnode.connect(6060);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote');
-            remote.product_export(null, null, null, null, function (result) {
+            remote.product_export(function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
                 if (!result.isArray)
@@ -295,7 +295,7 @@ module.exports = (function() {
           var d = dnode.connect(6060);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote attributeset');
-            remote.attributeset_export(null, function (result) {
+            remote.attributeset_export(function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
                 if (!result.isArray)
@@ -351,13 +351,13 @@ module.exports = (function() {
               var store = null; // TODO
               var attributes = null; //TODO 
               var identifierType = "id";
-              remote.product_items_info_2(options.where, store, function (result) {
+              remote.product_items_info_2(function (result) {
                   sails.log.debug("result length: "+result.length);
                   conn.end();
                   if (!result.isArray)
                     result = [result];
                   cb(null, result);
-              });
+              }, options.where, store);
             });
             d.on('error', function (error) {
               sails.log.error(error);
@@ -404,13 +404,13 @@ module.exports = (function() {
             var store = null; // TODO
             var identifierType = "id"
             var id = options.where.id;
-            remote.product_update(id, values, store, identifierType, function (result) {
+            remote.product_update(function (result) {
                 conn.end();
                 if(result === true)
                   result = [{id: id}];
                 console.log(result);
                 cb(null, result);
-            });
+            }, id, values, store, identifierType);
           });
           d.on('error', function (error) {
             sails.log.error(error);
