@@ -3,9 +3,13 @@
   -> adapter
 ---------------------------------------------------------------*/
 
-var async = require('async');
-var dnode = require('dnode');
-var criteria = require('./criteria');
+var async = require('async')
+  , _ = require('underscore')
+  , dnode = require('dnode')
+  , criteria = require('./criteria')
+  , utils = require('./utils')
+  , model = require('./model')
+  ;
 
 if(typeof(sails)==='undefined')
   sails = {
@@ -18,16 +22,20 @@ if(typeof(sails)==='undefined')
 
 module.exports = (function() {
 
+  // Keep track of all the dbs used by the app
+  var dbs = {}
+    , schemaStash = {}
+    ;
+
   // Holds an open connection
-  //var connection = {};
-  var schemaStash = {};
+  var connection = {};
 
   var adapter = {
 
     // Set to true if this adapter supports (or requires) things like data types, validations, keys, etc.
     // If true, the schema for models using this adapter will be automatically synced when the server starts.
     // Not terribly relevant if not using a non-SQL / non-schema-ed data store
-    syncable: false,
+    syncable: true,
 
     // Including a commitLog config enables transactions in this adapter
     // Please note that these are not ACID-compliant transactions: 
@@ -48,7 +56,7 @@ module.exports = (function() {
     defaults: {
 
       // For example:
-      // port: 3306,
+      port: 6060,
       // host: 'localhost'
 
       // If setting syncable, you should consider the migrate option, 
@@ -70,6 +78,24 @@ module.exports = (function() {
       console.log("\ncollection: ");
       console.log(collection);
 
+      var self = this;
+
+      // Load the url connection parameters if set
+      collection.config = utils.parseUrl(collection.config);
+
+      // If the configuration in this collection corresponds
+      // with a known database, reuse it the connection(s) to that db
+      dbs[collection.identity] = _.find(dbs, function(db) {
+        return collection.database === db.database;
+      });
+
+      // Otherwise initialize for the first time
+      if (!dbs[collection.identity]) {
+        dbs[collection.identity] = collection;
+      }
+
+      // Holds the Schema
+      dbs[collection.identity].schema = {};
       schemaStash[collection.identity] = collection.definition;
 
       cb();
@@ -91,14 +117,26 @@ module.exports = (function() {
     define: function(collectionName, definition, cb) {
       sails.log.debug("sails-magento: define: function("+collectionName+", "+definition+", "+cb+")");
       // Define a new "table" or "collection" schema in the data store
-      cb();
+      if(collectionName == "product") {
+        model.product(function (err, attributes) {
+          dbs[collectionName].schema = attributes;
+          cb(null, dbs[collectionName].schema);
+        });
+      } else {
+        cb(null, null);
+      }
     },
     // REQUIRED method if integrating with a schemaful database
     describe: function(collectionName, cb) {
       sails.log.debug("sails-magento: describe: function("+collectionName+", "+cb+")");
       // Respond with the schema (attributes) for a collection or table in the data store
-      var attributes = {};
-      cb(null, attributes);
+      if (collectionName === "product") {
+        var des = Object.keys(dbs[collectionName].schema).length === 0 ? null : dbs[collectionName].schema;
+        return cb(null, des);
+      }
+      else {
+        return cb(null, null);
+      }
     },
     // REQUIRED method if integrating with a schemaful database
     drop: function(collectionName, cb) {
@@ -110,10 +148,11 @@ module.exports = (function() {
     // Optional override of built-in alter logic
     // Can be simulated with describe(), define(), and drop(),
     // but will probably be made much more efficient by an override here
-    // alter: function (collectionName, attributes, cb) { 
-    // Modify the schema of a table or collection in the data store
-    // cb(); 
-    // },
+    alter: function (collectionName, attributes, cb) { 
+      sails.log.debug("sails-magento: alter: function("+collectionName+", "+attributes+", "+cb+")");
+      //Modify the schema of a table or collection in the data store
+      cb(); 
+    },
 
 
     // REQUIRED method if users expect to call Model.create() or any methods
@@ -134,7 +173,7 @@ module.exports = (function() {
 
       switch (collectionName) {
         case 'customer':
-          dnode.connect(6060, function (remote, conn) {
+          dnode.connect(dbs[collectionName].config.port, function (remote, conn) {
             var attributes = null; // TODO
             remote.customer_info(function (result) {
                 //sails.log.debug(result);
@@ -145,7 +184,7 @@ module.exports = (function() {
           });
         break;
         case 'category':
-          var d = dnode.connect(6060);                
+          var d = dnode.connect(dbs[collectionName].config.port);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote');
             var store = null; // TODO
@@ -175,13 +214,12 @@ module.exports = (function() {
             product = options.where.sku;
             identifierType = "sku";
           }
-          var d = dnode.connect(6060);                
+          var d = dnode.connect(dbs[collectionName].config.port);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote');
             var store = null; // TODO
             var attributes = null; // TODO
             remote.product_export(function (result) {
-              sails.log.debug("result length: "+result.length);
               conn.end();
               if (!result.isArray)
                 result = [result];
@@ -194,7 +232,7 @@ module.exports = (function() {
           });
         break;
         case 'attributeset':
-          var d = dnode.connect(6060);                
+          var d = dnode.connect(dbs[collectionName].config.port);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote attributeset');
             remote.attributeset_export(function (result) {
@@ -211,7 +249,7 @@ module.exports = (function() {
           });
         break;
         case 'productattribute':
-          var d = dnode.connect(6060);                
+          var d = dnode.connect(dbs[collectionName].config.port);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote attributeset');
             remote.productattribute_items(function (result) {
@@ -238,7 +276,7 @@ module.exports = (function() {
       sails.log.debug("findAll");
       switch (collectionName) {
         case 'customer':
-          var d = dnode.connect(6060);                
+          var d = dnode.connect(dbs[collectionName].config.port);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote');
             var store = null; // TODO
@@ -256,7 +294,7 @@ module.exports = (function() {
           });
         break;
         case 'category':
-          var d = dnode.connect(6060);                
+          var d = dnode.connect(dbs[collectionName].config.port);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote');
             var store = null; // TODO
@@ -275,7 +313,7 @@ module.exports = (function() {
           });
         break;
         case 'product':
-          var d = dnode.connect(6060);                
+          var d = dnode.connect(dbs[collectionName].config.port);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote');
             remote.product_export(function (result) {
@@ -292,7 +330,7 @@ module.exports = (function() {
           });
         break;
         case 'attributeset':
-          var d = dnode.connect(6060);                
+          var d = dnode.connect(dbs[collectionName].config.port);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote attributeset');
             remote.attributeset_export(function (result) {
@@ -345,7 +383,7 @@ module.exports = (function() {
           case 'customer':
           break;
           case 'product':
-            var d = dnode.connect(6060);                
+            var d = dnode.connect(dbs[collectionName].config.port);                
             d.on('remote', function (remote, conn) {
               sails.log.debug('remote');
               var store = null; // TODO
@@ -398,7 +436,7 @@ module.exports = (function() {
 
         break;
         case 'product':
-          var d = dnode.connect(6060);                
+          var d = dnode.connect(dbs[collectionName].config.port);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote');
             var store = null; // TODO
