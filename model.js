@@ -50,8 +50,10 @@ module.exports = {
 
               attributes[current_attribute] = {
                 type: current_type,
-                required: current_required
               };
+
+              if (current_required)
+                attributes[current_attribute].required = true; 
             }
           };
           //console.log(attributes);

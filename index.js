@@ -302,9 +302,7 @@ module.exports = (function() {
             remote.category_tree(function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
-                if (!result.isArray)
-                  result = [result];
-                cb(null, result);
+                cb(null, toArray (result));
             }, parentId, store);
           });
           d.on('error', function (error) {
@@ -316,12 +314,14 @@ module.exports = (function() {
           var d = dnode.connect(dbs[collectionName].config.port);                
           d.on('remote', function (remote, conn) {
             sails.log.debug('remote');
-            remote.product_export(function (result) {
-                sails.log.debug("result length: "+result.length);
+            /*
+             * Use "product_export" for much more information (slow and need much memory) and "product_items" for less information (slow but okay) in products
+             */
+            remote.product_items(function (items) {
+                sails.log.debug("items length: "+items.length);
                 conn.end();
-                if (!result.isArray)
-                  result = [result];
-                cb(null, result);
+
+                cb(null, toArray (items));
             });
           });
           d.on('error', function (error) {
@@ -336,9 +336,8 @@ module.exports = (function() {
             remote.attributeset_export(function (result) {
                 sails.log.debug("result length: "+result.length);
                 conn.end();
-                if (!result.isArray)
-                  result = [result];
-                cb(null, result);
+
+                cb(null, toArray (result));
             });
           });
           d.on('error', function (error) {
@@ -489,7 +488,7 @@ module.exports = (function() {
       // for an example, check out:
       // https://github.com/balderdashy/sails-dirty/blob/master/DirtyAdapter.js#L247
 
-    }
+    },
 
 
 
@@ -542,7 +541,6 @@ module.exports = (function() {
       cb("Failure!");
     }
 
-
     // Example success usage:
 
     Model.foo(function (err, result) {
@@ -560,8 +558,26 @@ module.exports = (function() {
 
       // outputs: Failure!
     })
-
     */
+
+    product_items: function (collectionName, cb) {
+      var d = dnode.connect(dbs[collectionName].config.port);                
+      d.on('remote', function (remote, conn) {
+        sails.log.debug('remote');
+        remote.product_items(function (result) {
+            sails.log.debug("result length: "+result.length);
+            conn.end();
+            if (!result.isArray)
+              result = [result];
+            cb(null, result);
+        });
+      });
+      d.on('error', function (error) {
+        sails.log.error(error);
+        cb(error, []);
+      });
+      cb("Failure!");
+    }
 
   }
 
@@ -575,13 +591,23 @@ module.exports = (function() {
     } else {
   
     }
-
-    function afterwards() {
-      logic(connection, function(err, result) {
-        if(cb) return cb(err, result);
-      });
-    }
   }
+
+  function afterwards() {
+    logic(connection, function(err, result) {
+      if(cb) return cb(err, result);
+    });
+  }
+
+  //Convert Object to Array
+  function toArray(object) {
+    var result_as_array = [];
+    for (var i = 0; i < object.length; i++) {
+      result_as_array.push(object[i]);
+    };
+    return result_as_array;
+  }
+
 
   //////////////       End       //////////////////////////////////////////
   ////////////// Private Methods //////////////////////////////////////////
