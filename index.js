@@ -173,40 +173,23 @@ module.exports = (function() {
 
       switch (collectionName) {
         case 'customer':
-          dnode.connect(dbs[collectionName].config.port, function (remote, conn) {
-            var attributes = null; // TODO
-            remote.customer_info(function (result) {
-                //sails.log.debug(result);
-                sails.log.debug("result length: "+result.length);
-                conn.end();
-                cb(null, result);
-            }, options.where.id, attributes);
+          MagentoAPI(dbs[collectionName].config.port, 'customer_info', 'info', [options.where.id, attributes], function (error, result) {
+            cb(error, result);
           });
         break;
         case 'category':
-          var d = dnode.connect(dbs[collectionName].config.port);                
-          d.on('remote', function (remote, conn) {
-            sails.log.debug('remote');
-            var store = null; // TODO
-            var attributes = null; // TODO
-            remote.category_info(function (result) {
-                sails.log.debug("result length: "+result.length);
-                conn.end();
-                if (!result.isArray)
-                  result = [result];
-                cb(null, result);
-            }, options.where.id, store, attributes);
-          });
-          d.on('error', function (error) {
-            sails.log.error(error);
-            cb(error, []);
+          MagentoAPI(dbs[collectionName].config.port, 'product_export', 'info', [options.where.id, store, attributes], function (error, result) {
+            cb(error, result);
           });
         break;
         case 'product':
-          var store = null; // TODO
-          var attributes = null; //TODO 
-          var identifierType = "id";
           var product;
+          var store = null;
+          var all_stores = true;
+          var attributes = null; //TODO ?
+          var identifierType = "id";
+          var integrate_set = false;
+          var normalize = true;
           if (typeof(options.where.id) != "undefined" && options.where.id != null) {
             product = options.where.id;
           }
@@ -214,55 +197,23 @@ module.exports = (function() {
             product = options.where.sku;
             identifierType = "sku";
           }
-          var d = dnode.connect(dbs[collectionName].config.port);                
-          d.on('remote', function (remote, conn) {
-            sails.log.debug('remote');
-            var store = null; // TODO
-            var attributes = null; // TODO
-            remote.product_export(function (result) {
-              conn.end();
-              if (!result.isArray)
-                result = [result];
-              cb(null, result);
-            }, product, store, attributes, identifierType);
-          });
-          d.on('error', function (error) {
-            sails.log.error(error);
-            cb(error, []);
+          MagentoAPI(dbs[collectionName].config.port, 'product_export', 'info', [product, store, all_stores, attributes, identifierType, integrate_set, normalize], function (error, result) {
+            cb(error, result);
           });
         break;
         case 'attributeset':
-          var d = dnode.connect(dbs[collectionName].config.port);                
-          d.on('remote', function (remote, conn) {
-            sails.log.debug('remote attributeset');
-            remote.attributeset_export(function (result) {
-                sails.log.debug("result length: "+result.length);
-                conn.end();
-                if (!result.isArray)
-                  result = [result];
-                cb(null, result);
-            }, options.where.id);
-          });
-          d.on('error', function (error) {
-            sails.log.error(error);
-            cb(error, []);
+          MagentoAPI(dbs[collectionName].config.port, 'attributeset_export', 'info', [options.where.id], function (error, result) {
+            cb(error, result);
           });
         break;
         case 'productattribute':
-          var d = dnode.connect(dbs[collectionName].config.port);                
-          d.on('remote', function (remote, conn) {
-            sails.log.debug('remote attributeset');
-            remote.productattribute_items(function (result) {
-                sails.log.debug("result length: "+result.length);
-                conn.end();
-                if (!result.isArray)
-                  result = [result];  
-                cb(null, result);
-            }, options.where.id);
+          MagentoAPI(dbs[collectionName].config.port, 'productattribute_items', 'info', [options.where.id], function (error, result) {
+            cb(error, result);
           });
-          d.on('error', function (error) {
-            sails.log.error(error);
-            cb(error, []);
+        break;
+        case 'store':
+          MagentoAPI(dbs[collectionName].config.port, 'store_info', 'info', [options.where.id], function (error, result) {
+            cb(error, result);
           });
         break;
         default:
@@ -276,73 +227,36 @@ module.exports = (function() {
       sails.log.debug("findAll");
       switch (collectionName) {
         case 'customer':
-          var d = dnode.connect(dbs[collectionName].config.port);                
-          d.on('remote', function (remote, conn) {
-            sails.log.debug('remote');
-            var store = null; // TODO
-            remote.customer_items(function (result) {
-                sails.log.debug("result length: "+result.length);
-                conn.end();
-                if (!result.isArray)
-                  result = [result];
-                cb(null, result);
-            }, null, store);
-          });
-          d.on('error', function (error) {
-            sails.log.error(error);
-            cb(error, []);
+          var store = null; // TODO
+          MagentoAPI(dbs[collectionName].config.port, 'customer_items', 'list', [null, store], function (error, result) {
+            cb(error, result);
           });
         break;
         case 'category':
-          var d = dnode.connect(dbs[collectionName].config.port);                
-          d.on('remote', function (remote, conn) {
-            sails.log.debug('remote');
-            var store = null; // TODO
-            var parentId = null;
-            remote.category_tree(function (result) {
-                sails.log.debug("result length: "+result.length);
-                conn.end();
-                cb(null, toArray (result));
-            }, parentId, store);
-          });
-          d.on('error', function (error) {
-            sails.log.error(error);
-            cb(error, []);
+          var store = null; // TODO
+          var parentId = null;
+          MagentoAPI(dbs[collectionName].config.port, 'category_tree', 'info', [parentId, store], function (error, result) {
+            cb(error, result);
           });
         break;
         case 'product':
-          var d = dnode.connect(dbs[collectionName].config.port);                
-          d.on('remote', function (remote, conn) {
-            sails.log.debug('remote');
-            /*
-             * Use "product_export" for much more information (slow and need much memory) and "product_items" for less information (slow but okay) in products
-             */
-            remote.product_items(function (items) {
-                sails.log.debug("items length: "+items.length);
-                conn.end();
-
-                cb(null, toArray (items));
-            });
-          });
-          d.on('error', function (error) {
-            sails.log.error(error);
-            cb(error, []);
+          MagentoAPI(dbs[collectionName].config.port, 'product_items', 'list', [], function (error, result) {
+            cb(error, result);
           });
         break;
         case 'attributeset':
-          var d = dnode.connect(dbs[collectionName].config.port);                
-          d.on('remote', function (remote, conn) {
-            sails.log.debug('remote attributeset');
-            remote.attributeset_export(function (result) {
-                sails.log.debug("result length: "+result.length);
-                conn.end();
-
-                cb(null, toArray (result));
-            });
+          MagentoAPI(dbs[collectionName].config.port, 'attributeset_export', 'list', [], function (error, result) {
+            cb(error, result);
           });
-          d.on('error', function (error) {
-            sails.log.error(error);
-            cb(error, []);
+        break;
+        case 'productattribute':
+          MagentoAPI(dbs[collectionName].config.port, 'productattribute_all', 'list', [], function (error, result) {
+            cb(error, result);
+          });
+        break;
+        case 'store':
+          MagentoAPI(dbs[collectionName].config.port, 'store_items', 'list', [], function (error, result) {
+            cb(error, result);
           });
         break;
         default:
@@ -577,6 +491,12 @@ module.exports = (function() {
         cb(error, []);
       });
       cb("Failure!");
+    },
+
+    store_tree: function (collectionName, cb) {
+      MagentoAPI(dbs[collectionName].config.port, 'store_tree', 'list', [], function (error, result) {
+        cb(error, result);
+      });
     }
 
   }
@@ -593,19 +513,125 @@ module.exports = (function() {
     }
   }
 
-  function afterwards() {
+  function afterwards () {
     logic(connection, function(err, result) {
       if(cb) return cb(err, result);
     });
   }
 
+  function MagentoAPI (port, functionname, resulttype, params, callback) {
+    console.log("Magento API");
+    var d = dnode.connect(port);                
+    d.on('remote', function (remote, conn) {
+      sails.log.debug('remote store');
+      switch (params.length) {
+        case 0:
+          remote[functionname](function (result) {
+            sails.log.debug(result);
+            conn.end();
+            processedResult(resulttype, result, callback);
+          });
+        break;
+        case 1:
+          remote[functionname](function (result) {
+            sails.log.debug(result);
+            conn.end();
+            processedResult(resulttype, result, callback);
+          }, params[0]);
+        break;
+        case 2:
+          remote[functionname](function (result) {
+            sails.log.debug(result);
+            conn.end();
+            processedResult(resulttype, result, callback);
+          }, params[0], params[1]);
+        break;
+        case 3:
+          remote[functionname](function (result) {
+            sails.log.debug(result);
+            conn.end();
+            processedResult(resulttype, result, callback);
+          }, params[0], params[1], params[2]);
+        break;
+        case 4:
+          remote[functionname](function (result) {
+            sails.log.debug(result);
+            conn.end();
+            processedResult(resulttype, result, callback);
+          }, params[0], params[1], params[2], params[3]);
+        break;
+        case 5:
+          remote[functionname](function (result) {
+            sails.log.debug(result);
+            conn.end();
+            processedResult(resulttype, result, callback);
+          }, params[0], params[1], params[2], params[3], params[4]);
+        break;
+        case 6:
+          remote[functionname](function (result) {
+            sails.log.debug(result);
+            conn.end();
+            processedResult(resulttype, result, callback);
+          }, params[0], params[1], params[2], params[3], params[4], params[5]);
+        break;
+        case 7:
+          remote[functionname](function (result) {
+            sails.log.debug(result);
+            conn.end();
+            processedResult(resulttype, result, callback);
+          }, params[0], params[1], params[2], params[3], params[4], params[5], params[6]);
+        break;
+      }
+
+    });
+    d.on('error', function (error) {
+      sails.log.error(error);
+      callback (error, []);
+    });
+  }
+
+  function processedResult(resulttype, object, callback) {
+    if(typeof (object.status) === 'undefined') {
+      callback (null, toArray (resulttype, object));
+    } else {
+      switch (object.status) {
+        case 400:
+        case 403:
+        case 404:
+        case 500:
+          callback (new Error(object.message), null);
+        break;
+        default: // TODO catch more status codes
+          callback (null, toArray (resulttype, object));
+        break;
+      }
+    }
+  }
+
   //Convert Object to Array
-  function toArray(object) {
-    var result_as_array = [];
-    for (var i = 0; i < object.length; i++) {
-      result_as_array.push(object[i]);
-    };
-    return result_as_array;
+  function toArray(resulttype, object) {
+    // if is allready an array
+    if (object.isArray)
+      return object;
+    else {
+      var result_as_array = [];
+      switch (resulttype) {
+        case 'info':
+          return [object];
+        break;
+        case 'list':
+          if(typeof (object.length) === 'undefined') {
+            return [object];
+          } else {
+            for (var i = 0; i < object.length; i++) {
+              result_as_array.push(object[i]);
+            };
+            return result_as_array;
+          }
+        break;
+      };
+    }
+
   }
 
 
