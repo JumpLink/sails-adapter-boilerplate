@@ -71,12 +71,12 @@ module.exports = (function() {
 
     // This method runs when a model is initially registered at server start time
     registerCollection: function(collection, cb) {
-      console.log("sails-magento: registerCollection: function(collection, cb)");
-      console.log("\ncb: ");
-      console.log(""+cb);
+      // sails.log.debug("sails-magento: registerCollection: function(collection, cb)");
+      // sails.log.debug("\ncb: ");
+      // sails.log.debug(""+cb);
 
-      console.log("\ncollection: ");
-      console.log(collection);
+      // sails.log.debug("\ncollection: ");
+      // sails.log.debug(collection);
 
       var self = this;
 
@@ -108,14 +108,14 @@ module.exports = (function() {
     // Optional hook fired when a model is unregistered, typically at server halt
     // useful for tearing down remaining open connections, etc.
     teardown: function(cb) {
-      sails.log.debug("sails-magento: teardown: function("+cb+")");
+      // sails.log.debug("sails-magento: teardown: function("+cb+")");
       cb();
     },
 
 
     // REQUIRED method if integrating with a schemaful database
     define: function(collectionName, definition, cb) {
-      sails.log.debug("sails-magento: define: function("+collectionName+", "+definition+", "+cb+")");
+      // sails.log.debug("sails-magento: define: function("+collectionName+", "+definition+", "+cb+")");
       // Define a new "table" or "collection" schema in the data store
       if(collectionName == "product") {
         model.product(function (err, attributes) {
@@ -128,7 +128,7 @@ module.exports = (function() {
     },
     // REQUIRED method if integrating with a schemaful database
     describe: function(collectionName, cb) {
-      sails.log.debug("sails-magento: describe: function("+collectionName+", "+cb+")");
+      // sails.log.debug("sails-magento: describe: function("+collectionName+", "+cb+")");
       // Respond with the schema (attributes) for a collection or table in the data store
       if (collectionName === "product") {
         var des = Object.keys(dbs[collectionName].schema).length === 0 ? null : dbs[collectionName].schema;
@@ -140,7 +140,7 @@ module.exports = (function() {
     },
     // REQUIRED method if integrating with a schemaful database
     drop: function(collectionName, cb) {
-      sails.log.debug("sails-magento: drop: function("+collectionName+", "+cb+")");
+      // sails.log.debug("sails-magento: drop: function("+collectionName+", "+cb+")");
       // Drop a "table" or "collection" schema from the data store
       cb();
     },
@@ -149,7 +149,7 @@ module.exports = (function() {
     // Can be simulated with describe(), define(), and drop(),
     // but will probably be made much more efficient by an override here
     alter: function (collectionName, attributes, cb) { 
-      sails.log.debug("sails-magento: alter: function("+collectionName+", "+attributes+", "+cb+")");
+      // sails.log.debug("sails-magento: alter: function("+collectionName+", "+attributes+", "+cb+")");
       //Modify the schema of a table or collection in the data store
       cb(); 
     },
@@ -157,7 +157,7 @@ module.exports = (function() {
 
     // REQUIRED method if users expect to call Model.create() or any methods
     create: function(collectionName, values, cb) {
-      sails.log.debug("sails-magento: create: function("+collectionName+", "+values+", "+cb+")");
+      // sails.log.debug("sails-magento: create: function("+collectionName+", "+values+", "+cb+")");
       // Create a single new model specified by values
 
       // Respond with error or newly created model instance
@@ -165,11 +165,11 @@ module.exports = (function() {
     },
 
     findOne: function(collectionName, options, cb) {
-      sails.log.debug("sails-magento: findOne: function(collectionName, options, cb)");
-      sails.log.debug("\ncollectionName:");
-      sails.log.debug(collectionName);
-      sails.log.debug("\noptions:");
-      sails.log.debug(options);
+      // sails.log.debug("sails-magento: findOne: function(collectionName, options, cb)");
+      // sails.log.debug("\ncollectionName:");
+      // sails.log.debug(collectionName);
+      // sails.log.debug("\noptions:");
+      // sails.log.debug(options);
 
       switch (collectionName) {
         case 'customer':
@@ -277,19 +277,19 @@ module.exports = (function() {
         this.findAll(collectionName, options, cb);
       }
       else {
-        sails.log.debug("sails-magento: find: function(collectionName, options, cb)");
-        sails.log.debug("\ncollectionName:");
-        sails.log.debug(collectionName);
-        sails.log.debug("\noptions:");
-        sails.log.debug(options);
+        // sails.log.debug("sails-magento: find: function(collectionName, options, cb)");
+        // sails.log.debug("\ncollectionName:");
+        // sails.log.debug(collectionName);
+        // sails.log.debug("\noptions:");
+        // sails.log.debug(options);
         // ** Filter by criteria in options to generate result set
 
         // Rewrite where criteria
         if(options.where && options.limit != 1) {
           var where = {where: options.where };
           options.where = criteria.rewriteCriteria(where, schemaStash[collectionName], collectionName).where;
-          sails.log.debug("\nrewriteCriteria result: ");
-          sails.log.debug(options);
+          // sails.log.debug("\nrewriteCriteria result: ");
+          // sails.log.debug(options);
         }
         switch (collectionName) {
 
@@ -303,7 +303,6 @@ module.exports = (function() {
               var attributes = null; //TODO 
               var identifierType = "id";
               remote.product_items_info_2(function (result) {
-                  sails.log.debug("result length: "+result.length);
                   conn.end();
                   if (!result.isArray)
                     result = [result];
@@ -328,15 +327,15 @@ module.exports = (function() {
 
     // REQUIRED method if users expect to call Model.update()
     update: function(collectionName, options, values, cb) {
-      sails.log.debug("sails-magento: update: function(collectionName, options, values, cb)");
-      sails.log.debug("\ncollectionName:");
-      sails.log.debug(collectionName);
-      sails.log.debug("\noptions:");
-      sails.log.debug(options);
-      sails.log.debug("\nvalues:");
-      sails.log.debug(values);
-      sails.log.debug("\ncb:");
-      sails.log.debug(cb);
+      // sails.log.debug("sails-magento: update: function(collectionName, options, values, cb)");
+      // sails.log.debug("\ncollectionName:");
+      // sails.log.debug(collectionName);
+      // sails.log.debug("\noptions:");
+      // sails.log.debug(options);
+      // sails.log.debug("\nvalues:");
+      // sails.log.debug(values);
+      // sails.log.debug("\ncb:");
+      // sails.log.debug(cb);
       // ** Filter by criteria in options to generate result set
 
       // Then update all model(s) in the result set
@@ -359,7 +358,7 @@ module.exports = (function() {
                 conn.end();
                 if(result === true)
                   result = [{id: id}];
-                console.log(result);
+                sails.log.debug(result);
                 cb(null, result);
             }, id, values, store, identifierType);
           });
@@ -382,7 +381,7 @@ module.exports = (function() {
 
     // REQUIRED method if users expect to call Model.destroy()
     destroy: function(collectionName, options, cb) {
-      sails.log.debug("sails-magento: destroy: function("+collectionName+", "+options+", "+cb+")");
+      // sails.log.debug("sails-magento: destroy: function("+collectionName+", "+options+", "+cb+")");
       // ** Filter by criteria in options to generate result set
 
       // Destroy all model(s) in the result set
@@ -395,7 +394,7 @@ module.exports = (function() {
 
     // REQUIRED method if users expect to call Model.stream()
     stream: function(collectionName, options, stream) {
-      sails.log.debug("sails-magento: stream: function("+collectionName+", "+options+", "+stream+")");
+      // sails.log.debug("sails-magento: stream: function("+collectionName+", "+options+", "+stream+")");
       // options is a standard criteria/options object (like in find)
 
       // stream.write() and stream.end() should be called.
@@ -520,63 +519,55 @@ module.exports = (function() {
   }
 
   function MagentoAPI (port, functionname, resulttype, params, callback) {
-    console.log("Magento API");
+    //sails.log.debug("Magento API");
     var d = dnode.connect(port);                
     d.on('remote', function (remote, conn) {
       sails.log.debug('remote store');
       switch (params.length) {
         case 0:
           remote[functionname](function (result) {
-            sails.log.debug(result);
             conn.end();
             processedResult(resulttype, result, callback);
           });
         break;
         case 1:
           remote[functionname](function (result) {
-            sails.log.debug(result);
             conn.end();
             processedResult(resulttype, result, callback);
           }, params[0]);
         break;
         case 2:
           remote[functionname](function (result) {
-            sails.log.debug(result);
             conn.end();
             processedResult(resulttype, result, callback);
           }, params[0], params[1]);
         break;
         case 3:
           remote[functionname](function (result) {
-            sails.log.debug(result);
             conn.end();
             processedResult(resulttype, result, callback);
           }, params[0], params[1], params[2]);
         break;
         case 4:
           remote[functionname](function (result) {
-            sails.log.debug(result);
             conn.end();
             processedResult(resulttype, result, callback);
           }, params[0], params[1], params[2], params[3]);
         break;
         case 5:
           remote[functionname](function (result) {
-            sails.log.debug(result);
             conn.end();
             processedResult(resulttype, result, callback);
           }, params[0], params[1], params[2], params[3], params[4]);
         break;
         case 6:
           remote[functionname](function (result) {
-            sails.log.debug(result);
             conn.end();
             processedResult(resulttype, result, callback);
           }, params[0], params[1], params[2], params[3], params[4], params[5]);
         break;
         case 7:
           remote[functionname](function (result) {
-            sails.log.debug(result);
             conn.end();
             processedResult(resulttype, result, callback);
           }, params[0], params[1], params[2], params[3], params[4], params[5], params[6]);
